@@ -1,0 +1,8 @@
+3rdparty
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+database.db3
+db.db3
+Makefile
+sm
