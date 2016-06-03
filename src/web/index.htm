@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <link rel="shortcut icon" href="Dashboard%20Template%20for%20Bootstrap_files/favicon_ico">
 
     <title>Super Manager</title>
 
@@ -44,23 +43,30 @@
 	
 <!-- TinyMCE init-->
 <script src="lib/tinymce/js/tinymce/tinymce.min.js"></script>
+<script src="lib/tinymce/js/tinymce/jquery.tinymce.min.js"></script>
+
+<script src="lib/knockout/knockout-3.4.0.js"></script>
+<script src="lib/knockout-tinymce-binding/wysiwyg.js"></script>
+
+	<script>
 	
-	<script>tinymce.init({
+	/*tinymce.init({
 	selector:'textarea',
 	//theme : 'advanced',
 	plugins : 'autoresize',
 	width: '100%',
 	autoresize_min_height: 400,
     autoresize_max_height: 800,
-	});
+	});*/
 	</script>
 	<script>
-	tinymce.init({
+	tinymce.init();
+	/*tinymce.init({
 	  selector: 'h3.editable',
 	  inline: true,
 	  toolbar: 'undo redo',
 	  menubar: false
-	});
+	});*/
 	</script>
 
 </head>
@@ -113,14 +119,16 @@
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
 			<div class="tab-content">
 				<div id="note" class="tab-pane fade in active">
-				  <h3 class="page-header editable">Название заметки</h3>
+				  <h3 class="page-header editable" data-bind="wysiwyg: notename, wysiwygConfig: { inline: true, toolbar: 'undo redo', menubar: false }" >Название заметки</h3>
 					<p>
 				  <div class="ui-widget">
 					<label for="tagwidget">Тэги: </label>
 					<input type="text" id="tagwidget" data-role="tagsinput">
 				  </div>
 					</p>
-				  <textarea id = "editor"></textarea>
+				  <textarea id = "editor" data-bind="wysiwyg: content" ></textarea>
+				  <div id="preview" data-bind="html: content"></div>
+				  <div id="test" data-bind="html: notename"></div>
 				</div>
 				
 				<div id="tagsview" class="tab-pane fade">
@@ -144,6 +152,33 @@
 	<script src="lib/typeahead/typeahead.bundle.js"></script>
 	
 	<script>
+	
+	(function( $, ko ) {
+
+            ko.bindingHandlers['wysiwyg'].defaults = {
+                'plugins': [ 'link' ],
+                'toolbar': 'undo redo | bold italic | bullist numlist | link',
+                'menubar': false,
+                'statusbar': false
+            };
+
+            function ViewModel( content,notename ) {
+                var self = this;
+                self.content = ko.observable( content );
+                self.notename = ko.observable( notename );
+            };
+            
+            $( document ).ready( function() {
+                ko.applyBindings( new ViewModel( '<p>Tinymce-knockout-binding TEXT.</p>','Note name' ) );
+
+            });
+
+        }( jQuery, ko ));
+	
+	
+	
+	
+	
 		var data = [
 	  {
 		text: "Parent 1",
