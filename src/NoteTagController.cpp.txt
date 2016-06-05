@@ -1,0 +1,57 @@
+/*
+ * NoteTagController.cpp
+ *
+ *  Created on: 5 июня 2016 г.
+ *      Author: lladmin
+ */
+
+
+#include "NoteTagController.h"
+
+using namespace Mongoose;
+
+		NoteTagController::NoteTagController(){
+
+		}
+
+		NoteTagController::~NoteTagController(){
+
+		}
+
+		void NoteTagController::setManager(ObjectManager *objman){
+			man = objman;
+		}
+
+		ObjectManager * NoteTagController::getManager(){
+			return(man);
+		}
+
+	    void NoteTagController::getNote(Request &request, JsonResponse &response)
+	    {
+	    	std::string sid = request.get("id","");
+	    	int64_t id;
+	    	stringstream strm(request.get("id",""));
+	    	strm >> id;
+
+	    	AbstractObject o;
+	    	man->getObjectByID(id,o);
+	    	response["id"]= sid;
+	    	response["name"]=o.getName();
+	    	response["content"]=o.getContent();
+	    	response["url"]=o.getUrl();
+	    	response["hash"]=o.getHash();
+	    	response["type"]=(int)o.getType();
+	    	Json::Int64 v= o.getCreated();
+	    	response["created"]= v;
+	    	response["changed"]= v;//(int64_t)o.getChanged();
+	    }
+
+        void NoteTagController::setup()
+        {
+        	addRouteResponse("GET", "/getNoteById", NoteTagController, getNote, JsonResponse);
+        }
+
+
+
+
+

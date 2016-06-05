@@ -1,0 +1,44 @@
+
+class JController : public JsonController{
+	    void list(Request &request, JsonResponse &response)
+	    {
+
+	    	fs::path targetDir(".");
+	    	fs::directory_iterator it(targetDir), eod;
+
+	    	int i = 0;
+	    	BOOST_FOREACH(fs::path const &p, std::make_pair(it, eod))
+	    	{
+	    	    if(fs::is_regular_file(p))
+	    	    {
+	    	        // do something with p
+	    	    	response[i++]["name"] = p.filename().generic_string();
+	    	    }
+	    	}
+
+
+/*   for (int i=0; i<5; i++) {
+	            	response[i]["id"] = i;
+	                response[i]["name"] = "Note ";// + std::to_string(i);*/
+
+	    }
+
+        void setup()
+        {
+        	addRouteResponse("GET", "/list", JController, list, JsonResponse);
+        }
+};
+
+class MyController : public Mongoose::WebController
+{
+    public:
+        void hello(Mongoose::Request &request, Mongoose::StreamResponse &response)
+        {
+            response << "Hello " << htmlEntities(request.get("name", "... what's your name ?")) << endl;
+        }
+
+        void setup()
+        {
+            addRoute("GET", "/hello", MyController, hello);
+        }
+};

@@ -107,12 +107,10 @@
     <div class="container-fluid">
       <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
-			<div id="notelist">
-			  <ul class="nav nav-sidebar">
-				<li class="active"><a href="#">Заметка1</a></li>
-				<li><a href="#">Заметка2</a></li>
-				<li><a href="#">Заметка3</a></li>
-				<li><a href="#">Заметка4</a></li>
+
+			 <div id="notelist">
+			  <ul data-bind="foreach: notes" class="nav nav-sidebar">
+				<li class="noteitem"><a href="#" data-bind="click: $parent.open"><span data-bind="text: name"> </span></a></li>
 			  </ul>
 			</div>
         </div>
@@ -153,6 +151,11 @@
 	
 	<script>
 	
+	var vm;
+	var nvm;
+	var timer;
+	var noteid = -1;
+	
 	(function( $, ko ) {
 
             ko.bindingHandlers['wysiwyg'].defaults = {
@@ -168,15 +171,51 @@
                 self.notename = ko.observable( notename );
             };
             
-            $( document ).ready( function() {
-                ko.applyBindings( new ViewModel( '<p>Tinymce-knockout-binding TEXT.</p>','Note name' ) );
+            function NotesViewModel( notesArray ) {
+                var self = this;
+                    self.notes = ko.observableArray(notesArray);
+		self.open = function(note) {
+		    noteCurrent = note;
+		    saveCurrentNote();
+		    $.getJSON("/getNoteById?id="+note.id, function(data) { 
+		      noteid = note.id;
+		      vm.content(data.content);
+		      vm.notename(data.name);
+		    })
+		};
+            };
+            
+            function saveCurrentNote(){
+	      if(noteid!=-1){
+		 // nvm.notes()[]
+		  $.post("/storeNote", { id:noteid, name: vm.notename(), content: vm.content(), type:0, url:""},
+		  function(data){
+		    console.log(data);
+		  });
+		  $.getJSON("/getNoteList", function(data) { 
+		      nvm.notes(data);
+		    });   
+	      }
+            }
 
+            
+            $( document ).ready( function() {
+		    vm = new ViewModel( "","" );
+		    nvm = new NotesViewModel( [] );
+		    ko.applyBindings( nvm, document.getElementById("notelist"));
+		    ko.applyBindings( vm, document.getElementById("note") );
+		    
+		     $.getJSON("/getNoteList", function(data) { 
+		      nvm.notes(data);
+		    });    
+		    
+		    timer = setInterval(saveCurrentNote, 10000);
             });
 
         }( jQuery, ko ));
 	
 	
-	
+
 	
 	
 		var data = [

@@ -159,6 +159,11 @@
 			<location>/home/lladmin/src/test-libraries-cmake/src/main.cpp</location>
 		</link>
 		<link>
+			<name>[Targets]/[exe] sm/Source Files/crypt.cpp</name>
+			<type>1</type>
+			<location>/home/lladmin/src/test-libraries-cmake/src/crypt.cpp</location>
+		</link>
+		<link>
 			<name>[Targets]/[exe] sm/Header Files</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>

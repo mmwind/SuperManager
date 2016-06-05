@@ -1,9 +1,6 @@
 #include <iostream>
 #include <SQLiteCpp/SQLiteCpp.h>
 
-#include <cryptopp/sha.h>
-#include <cryptopp/hex.h>
-
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
@@ -16,62 +13,29 @@
 #include <string>
 
 #include <Entity/ObjectManager.h>
-
+#include <ConfigManager.h>
+#include <NoteTagController.h>
 
 using namespace Mongoose;
 namespace fs = boost::filesystem;
 
-class JController : public JsonController{
-	    void list(Request &request, JsonResponse &response)
-	    {
-
-	    	fs::path targetDir(".");
-	    	fs::directory_iterator it(targetDir), eod;
-
-	    	int i = 0;
-	    	BOOST_FOREACH(fs::path const &p, std::make_pair(it, eod))
-	    	{
-	    	    if(fs::is_regular_file(p))
-	    	    {
-	    	        // do something with p
-	    	    	response[i++]["name"] = p.filename().generic_string();
-	    	    }
-	    	}
-
-
-/*   for (int i=0; i<5; i++) {
-	            	response[i]["id"] = i;
-	                response[i]["name"] = "Note ";// + std::to_string(i);*/
-
-	    }
-
-        void setup()
-        {
-        	addRouteResponse("GET", "/list", JController, list, JsonResponse);
-        }
-};
-
-class MyController : public Mongoose::WebController
-{
-    public:
-        void hello(Mongoose::Request &request, Mongoose::StreamResponse &response)
-        {
-            response << "Hello " << htmlEntities(request.get("name", "... what's your name ?")) << endl;
-        }
-
-        void setup()
-        {
-            addRoute("GET", "/hello", MyController, hello);
-        }
-};
 
 void MongooseTest(){
-	    MyController myController;
-	    JController myjController;
+		ConfigManager cm;
+		cm.read();
+
+		SQLite::Database db("database.db3", SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+		ObjectManager man;
+		man.setDb(&db);
+		man.initDatabase();
+
+		NoteTagController ntController;
+		ntController.setManager(&man);
 
 	    Server server(8080);
-	    server.registerController(&myController);
-	    server.registerController(&myjController);
+	    //server.setOption("enable_directory_listing", "false");
+	    server.setOption("document_root", cm.getWebroot());
+	    server.registerController(&ntController);
 
 	    server.start();
 
@@ -80,23 +44,7 @@ void MongooseTest(){
 	    }
 }
 
-void hashTest(){
-	  std::string s("dsfghjkhgfghjg");
-	  CryptoPP::SHA256 hash;
-	  byte digest[CryptoPP::SHA256::DIGESTSIZE];
 
-	  hash.Update( (const byte*) s.c_str(), s.length());
-	  hash.Final(digest);
-
-	  CryptoPP::HexEncoder encoder;
-	  std::string output;
-
-	  encoder.Attach( new CryptoPP::StringSink( output ) );
-	  encoder.Put( digest, sizeof(digest) );
-	  encoder.MessageEnd();
-
-	  std::cout << output << std::endl;
-}
 
 void dbTest(){
 	try
@@ -128,10 +76,23 @@ void dbTest(){
 	  }
 }
 
+
+void dbTest2(){
+	SQLite::Database db("database.db3", SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+			ObjectManager man;
+			man.setDb(&db);
+			AbstractObject a;
+			man.getObjectByID(3,a);
+			std::cout << "name=" << a.getName() << std::endl;
+}
 int main(){
   std::cout << "Hi!" << std::endl;
+  MongooseTest();
+  //dbTest2();
 
-  SQLite::Database db("database.db3", SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
+
+
+  /*SQLite::Database db("database.db3", SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE);
   ObjectManager man;
   man.setDb(&db);
   man.initDatabase();
@@ -156,7 +117,7 @@ int main(){
   man.addRelationObjectTag(a[2],t1);
   man.addRelationObjectTag(a[2],t2);
   man.addRelationObjectTag(a[3],t2);
-  man.addRelationObjectTag(a[4],t2);/**/
+  man.addRelationObjectTag(a[4],t2);*/
 
   return(0);
 }

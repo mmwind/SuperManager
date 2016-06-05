@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 project (SM)
 
 set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR}) 
-set(EXECUTABLES main.cpp) 
+set(EXECUTABLES main.cpp crypt.cpp) 
 set(TARGET_LINK_LIBS) 
 
 list( APPEND CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
