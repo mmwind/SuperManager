@@ -60,6 +60,8 @@ class NoteTagController : public JsonController{
 							response[i]["type"]=(int)os[i].getType();
 							response[i]["created"]= (Json::Int64)os[i].getCreated();
 							response[i]["changed"]= (Json::Int64)os[i].getChanged();
+							response[i]["hash"]=os[i].getHash();
+
 			    		}
 			    	}
 				std::cout << "List of notes "<< os.size() << std::endl;
@@ -94,11 +96,40 @@ class NoteTagController : public JsonController{
 			response["id"] = (Json::Int64)a.getId();
 		}
 
+		void  getTagTree(Request &request, JsonResponse &response)
+		{
+			man->getTagsTree(response);
+		}
+
+		void  getTagsList(Request &request, JsonResponse &response)
+		{
+			man->getTagList(response);
+			std::cout << " getTagList " << std::endl;
+		}
+
+		void  getTest(Request &request, JsonResponse &response)
+		{
+			response["test"] = request.getUrl();
+			std::cout << response.toStyledString() << std::endl;
+		}
+
 		void setup()
 		{
 		        	addRouteResponse("GET", "/getNoteById", NoteTagController, getNote, JsonResponse);
 		        	addRouteResponse("GET", "/getNoteList", NoteTagController, getNoteList, JsonResponse);
+
+		        	addRouteResponse("GET", "/getTagList", NoteTagController, getTagsList, JsonResponse);
+
+		        	addRouteResponse("GET", "/getTree", NoteTagController, getTagTree, JsonResponse);
+
 		        	addRouteResponse("POST", "/storeNote", NoteTagController, storeNote, JsonResponse);
+
+		        	addRouteResponse("GET", "/getTest", NoteTagController, getTest, JsonResponse);
+
+
+
+
+
 		}
 };
 }

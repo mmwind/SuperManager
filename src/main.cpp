@@ -39,6 +39,9 @@ void MongooseTest(){
 
 	    server.start();
 
+	    Json::Value v;
+	    man.getTagsTree(v);
+
 	    while (1) {
 	    	usleep(10);
 	    }

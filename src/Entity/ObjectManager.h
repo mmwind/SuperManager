@@ -12,7 +12,7 @@
 #include "TagObject.h"
 
 #include <SQLiteCpp/SQLiteCpp.h>
-
+#include <json/json.h>
 
 #include <iostream>
 #include <string>
@@ -254,7 +254,7 @@ class ObjectManager {
 
 		bool getObjectsList(std::vector<AbstractObject> &a){
 			try {
-				SQLite::Statement   query(*db, "SELECT ID,NAME,TYPE,CREATED,CHANGED FROM objects ORDER BY CHANGED");
+				SQLite::Statement   query(*db, "SELECT ID,NAME,TYPE,CREATED,CHANGED,HASH FROM objects ORDER BY CHANGED DESC");
 				a.clear();
 				while(query.executeStep()){
 					AbstractObject obj;
@@ -266,6 +266,7 @@ class ObjectManager {
 					obj.setCreated(crTime);
 					int64_t chTime = query.getColumn(4);
 					obj.setChanged(chTime);
+					obj.setHash(query.getColumn(5));
 					a.push_back(obj);
 				}
 
@@ -291,6 +292,7 @@ class ObjectManager {
 							}
 
 		}
+
 		void getTagsByObjectID(int64_t objid){
 			std::stringstream s;
 						s << "SELECT * FROM tags t LEFT JOIN objecttotag ot ON ot.ID_TAG = t.ID WHERE ot.ID_OBJECT = "<<objid <<";";
@@ -302,6 +304,65 @@ class ObjectManager {
 							{
 							      std::cout << "SQLite exception: " << e.what() << std::endl;
 							}
+		}
+
+		bool getTagsTree(Json::Value &val){
+			try {
+							SQLite::Statement   query(*db, "select t1.ID, t1.name, t.ID, t.name FROM tagtotag tt INNER JOIN tags t ON tt.ID_CHILD=t.ID INNER JOIN tags t1 ON tt.ID_PARENT=t1.ID;");
+
+							int j(0);
+							int k = 0;
+							bool first(true);
+							std::map< int,std::pair<int,int> > m;
+							while(query.executeStep()){
+								int id = query.getColumn(0);
+								std::map< int,std::pair<int,int> >::iterator it = m.find(id);
+								if(it!=m.end()){
+									m[id].second++;
+									val[j]["nodes"][m[id].second]["id"]= (Json::Int64) query.getColumn(2);
+									val[j]["nodes"][m[id].second]["text"]= query.getColumn(3).getText();
+								} else {
+									m[id]=std::make_pair(j++,0);
+									val[j]["id"] = id;
+									val[j]["text"] =  query.getColumn(1).getText();
+									val[j]["nodes"][0]["id"]= (Json::Int64) query.getColumn(2);
+									val[j]["nodes"][0]["text"]= query.getColumn(3).getText();
+								}
+
+							}
+
+							std::cout << val.toStyledString() <<"" << std::endl;
+
+						}
+							catch (std::exception& e)
+						{
+							std::cout << "SQLite exception: " << e.what() << std::endl;
+							return(false);
+						}
+							return(true);
+		}
+
+
+		bool getTagList(Json::Value &val){
+			try {
+							SQLite::Statement   query(*db, "SELECT ID,NAME FROM tags;");
+
+							int j(0);
+							while(query.executeStep()){
+
+									val[j]["id"]= (Json::Int64) query.getColumn(0);
+									val[j]["name"]= query.getColumn(1).getText();
+									j++;
+							}
+							std::cout << val.toStyledString() <<"" << std::endl;
+
+						}
+							catch (std::exception& e)
+						{
+							std::cout << "SQLite exception: " << e.what() << std::endl;
+							return(false);
+						}
+							return(true);
 		}
 /*
  select ID_PARENT, group_concat(ID_CHILD) from tagtotag group by ID_PARENT;

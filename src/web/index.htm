@@ -47,6 +47,9 @@
 
 <script src="lib/knockout/knockout-3.4.0.js"></script>
 <script src="lib/knockout-tinymce-binding/wysiwyg.js"></script>
+<script src="lib/crypto/sha256.js"></script>
+
+<script src="lib/jfeed/jquery.jfeed.js?version=1"></script>
 
 	<script>
 	
@@ -86,8 +89,11 @@
         </div>
         <div class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
-			<li><a data-toggle="tab" href="#note">Заметки</a></li>
+	    <li><a data-toggle="tab" href="#note">Заметки</a></li>
             <li><a data-toggle="tab" href="#tagsview">Тэги</a></li>
+            <li><a data-toggle="tab" href="#newsview">Новости</a></li>
+            <li><a data-toggle="tab" href="#newsview">Библиотека</a></li>
+            <li><a data-toggle="tab" href="#newsview">Файлы</a></li>
 			<li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Материалы<b class="caret"></b></a>
                 <ul class="dropdown-menu">
@@ -106,10 +112,10 @@
 
     <div class="container-fluid">
       <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
+        <div id="scroller" class="col-sm-3 col-md-2 sidebar">
 
-			 <div id="notelist">
-			  <ul data-bind="foreach: notes" class="nav nav-sidebar">
+			 <div id="notelistcontainer">
+			  <ul id="notelist" data-bind="foreach: notes" class="nav nav-sidebar">
 				<li class="noteitem"><a href="#" data-bind="click: $parent.open"><span data-bind="text: name"> </span></a></li>
 			  </ul>
 			</div>
@@ -125,13 +131,53 @@
 				  </div>
 					</p>
 				  <textarea id = "editor" data-bind="wysiwyg: content" ></textarea>
-				  <div id="preview" data-bind="html: content"></div>
-				  <div id="test" data-bind="html: notename"></div>
+				  <--div id="preview" data-bind="html: content"></div--!>
+				  <--div id="test" data-bind="html: notename"></div--!>
 				</div>
 				
 				<div id="tagsview" class="tab-pane fade">
 					<h3>Тэги</h3>
 					<div id="tree">
+					</div>
+					
+						<!-- Button trigger modal -->
+						<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal">
+						  Добавить тэг
+						</button>
+						
+						
+						<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+						  <div class="modal-dialog" role="document">
+						    <div class="modal-content">
+						      <div class="modal-header">
+						        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+						        <h4 class="modal-title" id="myModalLabel">Добавление тэга</h4>
+						      </div>
+						      <div class="modal-body">
+						        <select data-bind="foreach: tagslist" class="form-control">
+								  <option data-bind="text: name">1</option>
+								</select>
+								<input type="text" class="form-control" placeholder="Text input">
+						      </div>
+						      <div class="modal-footer">
+						        <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+						        <button type="button" class="btn btn-primary">Создать</button>
+						      </div>
+						    </div>
+						  </div>
+						</div>
+						
+						<!-- Modal 
+						
+						<select data-bind="foreach: tagslist" class="form-control">
+						  <option data-bind="text: name">1</option>
+						</select>-->
+
+				</div>
+				
+				<div id="newsview" class="tab-pane fade">
+					<h3>RSS</h3>
+					<div id="feed">
 					</div>
 				</div>
 				  
@@ -153,8 +199,11 @@
 	
 	var vm;
 	var nvm;
+	var tagsvm;
 	var timer;
 	var noteid = -1;
+	var tree;
+	var taglist;
 	
 	(function( $, ko ) {
 
@@ -162,7 +211,9 @@
                 'plugins': [ 'link' ],
                 'toolbar': 'undo redo | bold italic | bullist numlist | link',
                 'menubar': false,
-                'statusbar': false
+                'statusbar': false,
+                'height' : "600"
+
             };
 
             function ViewModel( content,notename ) {
@@ -174,87 +225,117 @@
             function NotesViewModel( notesArray ) {
                 var self = this;
                     self.notes = ko.observableArray(notesArray);
-		self.open = function(note) {
-		    noteCurrent = note;
-		    saveCurrentNote();
-		    $.getJSON("/getNoteById?id="+note.id, function(data) { 
-		      noteid = note.id;
-		      vm.content(data.content);
-		      vm.notename(data.name);
-		    })
-		};
+					self.open = function(note) {
+					    noteCurrent = note;
+					    saveCurrentNote();
+					    $.getJSON("/getNoteById?id="+note.id, function(data) { 
+					      noteid = note.id;
+					      vm.content(data.content);
+					      vm.notename(data.name);
+					    })
+					};
+            };
+            
+            function TagsViewModel( tagsTree, tagsArray ) {
+                var self = this;
+                    self.tagslist = ko.observableArray(tagsArray);
+                    self.tagsTree = ko.observableArray(tagsTree);
+					self.addtag = function(tag) {
+
+					};
             };
             
             function saveCurrentNote(){
-	      if(noteid!=-1){
-		 // nvm.notes()[]
-		  $.post("/storeNote", { id:noteid, name: vm.notename(), content: vm.content(), type:0, url:""},
-		  function(data){
-		    console.log(data);
-		  });
-		  $.getJSON("/getNoteList", function(data) { 
-		      nvm.notes(data);
-		    });   
-	      }
+		      if(noteid!=-1){
+			 // nvm.notes()[]
+			 var h = Sha256.hash(vm.content()).toUpperCase();
+			 if(h != noteCurrent.hash){
+			      $.post("/storeNote", { id:noteid, name: vm.notename(), content: vm.content(), type:0, url:""},
+			      function(data){
+					console.log(data);
+					noteCurrent.hash = h;
+					noteCurrent.name = vm.notename();
+					noteCurrent.content = vm.content();
+			      });
+			      $.getJSON("/getNoteList", function(data) { 
+				  	nvm.notes(data);
+				  });  
+			  }
+		      }
             }
 
             
             $( document ).ready( function() {
 		    vm = new ViewModel( "","" );
 		    nvm = new NotesViewModel( [] );
-		    ko.applyBindings( nvm, document.getElementById("notelist"));
+		    tagsvm = new TagsViewModel( [],[] );
+		    ko.applyBindings( nvm, document.getElementById("notelistcontainer"));
 		    ko.applyBindings( vm, document.getElementById("note") );
+		    ko.applyBindings( tagsvm, document.getElementById("tagsview") );
 		    
 		     $.getJSON("/getNoteList", function(data) { 
 		      nvm.notes(data);
 		    });    
 		    
+		     
+		     $.getJSON("/getTree", function(data) { 
+		    	 tree=data;
+		    	 tree = tree.filter(function(n){ return n != undefined }); 
+		    	 console.log(tree);
+		    	 
+		    	 	$('#tree').treeview({
+		    			  data: tree
+		    		});
+			 });    
+		     
+		     $.getJSON("/getTagList", function(data) { 
+		    	 taglist=data;
+		    	 tagsvm.tagslist(data);
+		    	 console.log(data);
+			 });  
+		     
 		    timer = setInterval(saveCurrentNote, 10000);
+		    
+		    
+		    $( "#scroller" ).scroll(function(element) {
+		      if($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight) {
+			    console.log('end reached, just download new items by ajax and add and renew UI with Knockout');
+			    // SELECT * FROM objects LIMIT ? OFFSET ?;
+			}
+		    });
             });
 
         }( jQuery, ko ));
 	
+	/*
+	 tree = [
+	            {
+	               "id" : 3,
+	               "nodes" : [
+	                  {
+	                     "id" : 5,
+	                     "text" : "Внутри тэг А"
+	                  },
+	                  {
+	                     "id" : 6,
+	                     "text" : "Внутри тэг Б"
+	                  }
+	               ],
+	               "text" : "Родитель"
+	            },
+	            {
+	               "id" : 4,
+	               "nodes" : [
+	                  {
+	                     "id" : 7,
+	                     "text" : "Внутри тэг Друого"
+	                  }
+	               ],
+	               "text" : "Другой Родитель"
+	            }
+	         ];*/
 	
 
-	
-	
-		var data = [
-	  {
-		text: "Parent 1",
-		nodes: [
-		  {
-			text: "Child 1",
-			nodes: [
-			  {
-				text: "Grandchild 1"
-			  },
-			  {
-				text: "Grandchild 2"
-			  }
-			]
-		  },
-		  {
-			text: "Child 2"
-		  }
-		]
-	  },
-	  {
-		text: "Parent 2"
-	  },
-	  {
-		text: "Parent 3"
-	  },
-	  {
-		text: "Parent 4"
-	  },
-	  {
-		text: "Parent 5"
-	  }
-	];
-
-	$('#tree').treeview({
-	  data: data
-	});
 	
 	var citynames = new Bloodhound({
 	  datumTokenizer: Bloodhound.tokenizers.obj.whitespace('name'),
@@ -287,5 +368,47 @@
 	  }
 	});
 	
+	
+	jQuery(function() {
+    jQuery.getFeed({
+        url: './rss.xml',
+        success: function(feed) {
+        
+            jQuery('#feed').append('<h2>'
+            + '<a href="'
+            + feed.link
+            + '">'
+            + feed.title
+            + '</a>'
+            + '</h2>');
+            
+            var html = '';
+            
+            for(var i = 0; i < feed.items.length && i < 5; i++) {
+            
+                var item = feed.items[i];
+                
+                html += '<h3>'
+                + '<a href="'
+                + item.link
+                + '">'
+                + item.title
+                + '</a>'
+                + '</h3>';
+                
+                html += '<div class="updated">'
+                + item.updated
+                + '</div>';
+                
+                html += '<div>'
+                + item.description
+                + '</div>';
+            }
+            
+            jQuery('#feed').append(html);
+        }    
+    });
+});
+
 	</script>
 </body></html>
